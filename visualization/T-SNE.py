@@ -10,7 +10,7 @@ import torch.nn as nn
 import matplotlib as mpl
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = '3'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -55,25 +55,52 @@ def out_feature(x, y, path):
     return out_put, out
 
 
-model_name = 'GTN_RE_NOblance'
-# path = '/home/ubuntu/liuyuanlin/data/ECG/example'
+model_name = 'GT_RE_NOblance'
+#path = '/home/ubuntu/liuyuanlin/data/ECG/example'
 path = '/home/ubuntu/liuyuanlin/data/ECG/500'
-model_path = '/home/ubuntu/liuyuanlin/code/ECG/best_model/GTN_RE_NOblance_3_3_1_model.pt'
+model_path = '/home/ubuntu/liuyuanlin/code/ECG/best_model/GT_RE_NOblance_3_2_model.pt'
 ECG = ECGDataset(path, frequency=250, time=30, exchange=False)
 # x, y = ECG.test_loder()
 x, y, x_val, y_val = ECG.data_loader(val_size=0.2)
 # x1 = x.view(-1, 90000)
 feature, x1 = out_feature(x, y, model_path)
 
+class_name = ['Normal', 'AF', 'I-AVB', 'LBBB', 'RBBB', 'PAC', 'PVC', 'STD', 'STE']
+
 X1_tsne = TSNE(n_components=2, random_state=33).fit_transform(x1)
 X_tsne = TSNE(n_components=2, random_state=33).fit_transform(feature)
 cm = colormap()
-plt.figure(figsize=(10, 10))
-plt.subplot(211)
-plt.scatter(X1_tsne[:, 0], X1_tsne[:, 1], s=10, c=y, cmap=cm)
-plt.xlabel('(a)')
-plt.subplot(212)
-plt.scatter(X_tsne[:, 0], X_tsne[:, 1], s=10, c=y, cmap=cm)
-plt.xlabel('(b)')
-plt.savefig(f'/home/ubuntu/liuyuanlin/code/ECG/plot/{model_name}_tsne.png', dpi=300)
+
+plt.figure(figsize=(10, 5))
+plt.subplot(121)
+scatter = plt.scatter(X1_tsne[:, 0], X1_tsne[:, 1], s=5, c=y, cmap=cm)
+a, b = scatter.legend_elements()
+b = ['$\\mathdefault {Normal}$',
+     '$\\mathdefault{AF}$',
+     '$\\mathdefault{I-AVB}$',
+     '$\\mathdefault{LBBB}$',
+     '$\\mathdefault {RBBB}$',
+     '$\\mathdefault{PAC}$',
+     '$\\mathdefault{PVC}$',
+     '$\\mathdefault{STD}$',
+     '$\\mathdefault{STE}$',
+     ]
+plt.legend(a, b, loc='upper right')
+# plt.xlabel('(a)')
+plt.subplot(122)
+scatter1 = plt.scatter(X_tsne[:, 0], X_tsne[:, 1], s=5, c=y, cmap=cm)
+a, b = scatter1.legend_elements()
+b = ['$\\mathdefault {Normal}$',
+     '$\\mathdefault{AF}$',
+     '$\\mathdefault{I-AVB}$',
+     '$\\mathdefault{LBBB}$',
+     '$\\mathdefault {RBBB}$',
+     '$\\mathdefault{PAC}$',
+     '$\\mathdefault{PVC}$',
+     '$\\mathdefault{STD}$',
+     '$\\mathdefault{STE}$',
+     ]
+plt.legend(a, b, loc='upper right')
+# plt.xlabel('(b)')
+plt.savefig(f'/home/ubuntu/liuyuanlin/code/ECG/plot/{model_name}_tsne.png', dpi=300, bbox_inches='tight')
 plt.show()

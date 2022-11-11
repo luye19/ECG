@@ -118,7 +118,7 @@ for j in range(9):
     auc[j] = []
 for i in range(3):
     for j in range(9):
-        label, pre_output, y_score = label_cal(model_name='GTN_RE_NOblance_3_3', data_loader=val_loader, n=i + 1)
+        label, pre_output, y_score = label_cal(model_name='GT_RE_NOblance_3', data_loader=val_loader, n=i + 1)
         f_score, accuracy, precison, re, auc_roc = class_change(data_class=j, ture_label=label, pre_label=pre_output,
                                                                 score=y_score)
         f1[j].append(f_score)
@@ -128,7 +128,7 @@ for i in range(3):
         auc[j].append(auc_roc)
 f_score = metric_cal_avg_sd(f1)
 accuracy = metric_cal_avg_sd(acc)
-precison = metric_cal_avg_sd(recall)
+precison = metric_cal_avg_sd(pre)
 re = metric_cal_avg_sd(recall)
 auc_roc = metric_cal_avg_sd(auc)
 calss_name = ['Normal', 'AF', 'I-AVB', 'LBBB', 'RBBB', 'PAC', 'PVC', 'STD', 'STE']

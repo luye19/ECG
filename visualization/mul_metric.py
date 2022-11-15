@@ -88,8 +88,8 @@ def metric_cal_avg_sd(metric=None):
 
 # load data
 # path = '/home/ubuntu/liuyuanlin/data/ECG/500'
-path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
-# path = '/home/ubuntu/liuyuanlin/data/ECG/example'
+#path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
+path = '/home/ubuntu/liuyuanlin/data/ECG/example'
 ECG = ECGDataset(path, frequency=250, time=30)
 
 # x_test, y_test = ECG.test_loder()

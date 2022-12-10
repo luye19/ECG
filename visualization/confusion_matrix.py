@@ -110,7 +110,7 @@ def plot_confusion_matrix(cm,
 # model_name = ['Res1d-18', 'lstm_7']
 # model_name_1 = ['Resnet10', 'VGG16', 'Inception_2']
 
-model_name = ['GTN_RE_NOblance_3_3']
+model_name = ['GT_RE_NOblance_3']
 
 for model_id in model_name:
     y_pred, y_true = con_matrix(model_id, test_loader)

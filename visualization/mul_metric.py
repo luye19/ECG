@@ -14,7 +14,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def list_to_np(list):
-    """"将list转化为打平后的numpy数组"""
+    """"将list转化为numpy数组"""
     for i in range(len(list)):
         if i == 0:
             b = np.array(list[i])

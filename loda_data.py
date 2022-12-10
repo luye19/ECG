@@ -119,32 +119,44 @@ class ECGDataset:
         self.HZ = 500  # 数据当前的频率
         self.exchange = exchange
 
-    def test_loder(self):
+    def test_loader(self, seg=True):
+        """load test dataset"""
         x = []
+        label = []
         path = os.path.join(self.path, 'testset')
         txt_name = os.listdir(path)
         txt_name.sort()
-        for txt_item in txt_name:
+        inform = pd.read_csv(os.path.join(self.path, 'test_label.csv'), header=0, encoding='gbk')
+        for (i, txt_item) in zip(range(len(txt_name)), txt_name):
             if txt_item.endswith('.txt') and (not txt_item.startswith('._')):
                 print(txt_item)
                 record_path = os.path.join(path, txt_item)
                 # x = sio.loadmat(record_path)['ECG'][0][0][2][:, -72000:].T
                 data = np.loadtxt(record_path)
-                data = self._resample_(data)  # 数据重采样
-                data = self._unified_length_(data)  # 统一数据长度
+                if seg:
+                    #data = self._resample_(data)
+                    data = self.segment(data)
+                    label_data = np.ones(data.shape[0]) * inform.label.loc[i]
+                else:
+                    data = self._resample_(data)  # 数据重采样
+                    data = self._unified_length_(data)  # 统一数据长度
+                    label_data = np.ones(data.shape[0]) * inform.label.loc[i]
             x.append(data)
-        x = np.asanyarray(x)
+            label.append(label_data)
+        x = np.asanyarray(x, dtype=object)
         if self.exchange:
             x = np.swapaxes(x, 1, 2)
-        x = torch.tensor(x)
+        if seg:
+            x = torch.tensor(self._list_to_np(x))
+            label = torch.tensor(self._list_to_np(label))
+        else:
+            x = torch.tensor(np.asanyarray(x))
+            label = torch.tensor(np.asanyarray(label))
         x = x.to(torch.float32)
-        inform = pd.read_csv(os.path.join(self.path, 'test_label.csv'), header=0, encoding='gbk')
-        label = inform['label']
-        label = np.array(label)
-        label = torch.tensor(label)
         return x, label
 
-    def data_loader(self, val_size=0.1, seed=11):
+    def data_loader(self, val_size=0.1, seed=11, seg=False):
+        """load train and validation dataset"""
         label_train = []
         label_val = []
         x_train = []
@@ -164,40 +176,95 @@ class ECGDataset:
                 data = np.loadtxt(record_path)
                 # a = self._test_()
                 if i in range_num:
-                    data = self._resample_(data)
-                    data = self._unified_length_(data)
+                    if seg:
+                        #data = self._resample_(data)
+                        data = self.segment(data)
+                        label_data = np.ones(data.shape[0]) * inform.label.loc[i]
+                    else:
+                        data = self._resample_(data)
+                        data = self._unified_length_(data)
+                        label_data = np.ones(data.shape[0]) * inform.label.loc[i]
                     x_val.append(data)
-                    label_val.append(inform.label.loc[i])
+                    label_val.append(label_data)
                 else:
-                    data = self._resample_(data)
-                    data = self._transform_(data)
-                    data = self._unified_length_(data)
+                    if seg:
+                        #data = self._resample_(data)
+                        #data = self._transform_(data)
+                        data = self.segment(data)
+                        label_data = np.ones(data.shape[0]) * inform.label.loc[i]
+                    else:
+                        data = self._resample_(data)
+                        data = self._transform_(data)
+                        data = self._unified_length_(data)
+                        label_data = np.ones(data.shape[0]) * inform.label.loc[i]
                     x_train.append(data)
-                    label_train.append(inform.label.loc[i])
+                    label_train.append(label_data)
             i = i + 1
+
         if self.exchange:
-            x_train = torch.tensor(np.swapaxes(np.asanyarray(x_train), 1, 2))
-            x_val = torch.tensor(np.swapaxes(np.asanyarray(x_val), 1, 2))
+            # x_train = torch.tensor(np.swapaxes(np.asanyarray(x_train), 1, 2))
+            # x_val = torch.tensor(np.swapaxes(np.asanyarray(x_val), 1, 2))
+            x_train = torch.tensor(np.swapaxes(self._list_to_np(x_train), 1, 2))
+            x_val = torch.tensor(np.swapaxes(self._list_to_np(x_val), 1, 2))
         else:
-            x_train = torch.tensor(np.asanyarray(x_train))
-            x_val = torch.tensor(np.asanyarray(x_val))
+            # x_train = torch.tensor(np.asanyarray(x_train))
+            # x_val = torch.tensor(np.asanyarray(x_val))
+            x_train = torch.tensor(self._list_to_np(x_train))
+            x_val = torch.tensor(self._list_to_np(x_val))
         x_train = x_train.to(torch.float32)
         x_val = x_val.to(torch.float32)
-        label_train = torch.tensor(np.asanyarray(label_train))
-        label_val = torch.tensor(np.asanyarray(label_val))
+        label_train = torch.tensor(self._list_to_np(label_train))
+        label_val = torch.tensor(self._list_to_np(label_val))
         if val_size == 0:
             return x_train, label_train
         else:
             return x_train, label_train, x_val, label_val
 
-    def _unified_length_(self, data):
+    def classdata_loader(self, class_name=None, lead=None, seg=False):
+        """class_name = 0 represent the first class, lead = 0 represent the first lead"""
+        x = []
+        label = []
+        path = os.path.join(self.path, 'trainset')
+        txt_name = os.listdir(path)
+        txt_name.sort()
+        inform = pd.read_csv(os.path.join(self.path, 'train_label.csv'), header=0, encoding='gbk')
+        for j in class_name:
+            class_index = inform[inform.label == j].index.tolist()
+            # class_label = np.ones(len(class_index))*j
+            # label_1.append(class_label)
+            for i in class_index:
+                txt_item = txt_name[i]
+                print(txt_item)
+                record_path = os.path.join(path, txt_item)
+                data = np.loadtxt(record_path)
+                data = data[lead]
+                if seg:
+                    data = self.segment(data)
+                    label_data = np.ones(data.shape[0]) * j
+                else:
+                    data = self._resample_(data)
+                    data = self._unified_length_(data, lead_num=len(lead))
+                    label_data = np.ones(data.shape[0]) * j
+                # self.normalization(data, txt_item) # 检查中存不存在某些导联全部为零的数据
+                x.append(data)
+                label.append(label_data)
+        if seg:
+            x = torch.tensor(self._list_to_np(x))
+            label = torch.tensor(self._list_to_np(label))
+        else:
+            x = torch.tensor(np.asanyarray(x))
+            label = torch.tensor(np.asanyarray(label))
+        # x = x.to(torch.float32)
+        return x, label
+
+    def _unified_length_(self, data, lead_num=12):
         N = self.frequency * self.time
         if data.shape[1] <= N:
             data = np.pad(data, ((0, 0), (0, N - data.shape[1])), 'constant',
                           constant_values=(0, 0))  # 用0补齐记录时间不足30s的数据
         else:
             data_1 = data
-            data = np.random.rand(12, N)
+            data = np.empty([lead_num, N])
             for i in range(data.shape[0]):
                 data[i] = np.delete(data_1[i], np.arange(N, data_1.shape[1]), axis=0)
         return data
@@ -224,6 +291,38 @@ class ECGDataset:
         if self.frequency < self.HZ:
             sig = signal.resample_poly(sig, self.frequency, self.HZ, axis=1)
         return sig
+
+    def _list_to_np(self, list):
+        """"将list转化为numpy数组"""
+        global b
+        for i in range(len(list)):
+            if i == 0:
+                b = np.array(list[i])
+            else:
+                b = np.append(b, np.array(list[i]), axis=0)
+        return b
+
+    def normalization(self, x, txt):
+        max = np.max(x, axis=1)
+        min = np.min(x, axis=1)
+        # max = np.expand_dims(max, axis=1)
+        # min = np.expand_dims(min, axis=1)
+        a = (max - min)
+        if np.argmax(a == 0) != 0:
+            print(txt)  # 筛查某一导联全为零的异常数据
+
+    def segment(self, data):
+        "分割长度=1s X 采样频率"
+        x = []
+        time_step = data.shape[1]
+        N = time_step // self.frequency
+        # print(N)
+        for i in range(N):
+            n = 0 + i * self.frequency
+            m = self.frequency + i * self.frequency
+            x.append(data[..., n:m])
+        x = np.asanyarray(x)
+        return x
 
     def _test_(self):
         a = np.random.randn()

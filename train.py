@@ -24,13 +24,13 @@ from GTN.GT_RE import GT_RE
 from GTN import GT_RE
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=11, help='Random seed.')
-parser.add_argument('--name', type=str, default='GT_RE_NOblance_3', help='name of model.')
-parser.add_argument('--bachsize', type=int, default=36, help='Number of bachsize.')
+parser.add_argument('--name', type=str, default='Res18_1d_se', help='name of model.')
+parser.add_argument('--bachsize', type=int, default=64, help='Number of bachsize.')
 parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
@@ -133,19 +133,19 @@ def main():
     # load data
     path = '/home/ubuntu/liuyuanlin/data/ECG/500'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
-    path = '/home/ubuntu/liuyuanlin/data/ECG/example'
-    ECG = ECGDataset(path, frequency=250, time=30, exchange=False)
-    # x_test, y_test = ECG.test_loder()
+    # path = '/home/ubuntu/liuyuanlin/data/ECG/example'
+    ECG = ECGDataset(path, frequency=500, time=60, exchange=False)
+    x_test, y_test = ECG.test_loader(seg=True)
     # x_test = x_test.unsqueeze(1)
-    # test_set = torch.utils.data.TensorDataset(x_test, y_test)
-    # test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.bachsize, shuffle=False)
+    test_set = torch.utils.data.TensorDataset(x_test, y_test)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.bachsize, shuffle=False)
     log = pd.DataFrame(index=[], columns=[
         'experiment', 'epoch', 'lr', 'loss', 'acc', 'val_loss', 'val_acc'
     ])
     # 10 randomized experiments
     for i in range(1, args.repeat_num + 1):
         best_acc = 0
-        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.05, seed=i + 10)
+        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.05, seed=i + 10, seg=True)
         # x_train = x_train.unsqueeze(1)
         # x_val = x_val.unsqueeze(1)
         train_set = torch.utils.data.TensorDataset(x_train, y_train)
@@ -158,10 +158,10 @@ def main():
         # model = Resnet(resblock, blockNums=[1, 1, 1, 1], nb_classes=9)
         # model = archs.__dict__[args.arch](args, 9)
         # model = LSTM(embedding_dim=7500, hidden_size=512, num_classes=9, num_layers=1, bidirectional=False)
-        # model = resnet18()
+        model = resnet18()
         # model = inception()
         # model = Transformer(d_model=256, d_input=1500, d_channel=12, d_output=9, d_hidden=512, q=2, v=2, h=2, N=2,dropout=args.dropout, pe=True, mask=True, device=DEVICE)
-        model = Re_GTN(BasicBlock1d, [2, 2, 2, 2], device=DEVICE)
+        # model = Re_GTN(BasicBlock1d, [2, 2, 2, 2], device=DEVICE)
         # model = GT_RE(BasicBlock1d, [2, 2, 2, 2], device=DEVICE)
         model.cuda()
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -198,7 +198,7 @@ def main():
             acc_v.append(acc_val)
         # best_model_path = '/home/ubuntu/liuyuanlin/code/ECG/best_model/resnet18_1_model.pt'
         best_net = torch.load(best_model_path)
-        f1, acc, pre, recall, auc = metrics_cal(val_loader, best_net)
+        f1, acc, pre, recall, auc = metrics_cal(test_loader, best_net)
         num.append(i)
         f1_list.append(f1)
         acc_list.append(acc)
@@ -208,10 +208,10 @@ def main():
 
         print("Experiment%d The best val_acc: %.4f" % (i, best_acc))
         path = '/home/ubuntu/liuyuanlin/code/ECG/plot/' + args.name + '_ex' + str(i) + '_'
-        # plot_figure(loss_tr, 'loss_train', path)
-        # plot_figure(loss_v, 'loss_val', path)
-        # plot_figure(acc_tr, 'acc_train', path)
-        # plot_figure(acc_v, 'acc_val', path)
+        plot_figure(loss_tr, 'loss_train', path)
+        plot_figure(loss_v, 'loss_val', path)
+        plot_figure(acc_tr, 'acc_train', path)
+        plot_figure(acc_v, 'acc_val', path)
 
     # saving metrics
     res = {'num': num,

@@ -24,8 +24,8 @@ def metrics_cal(test_loader, net):
     with torch.no_grad():
         for i, (x_test, label_test) in test_data:
             x_test = x_test.cuda()
-            # pre_test = net(x_test)
-            pre_test = net(x_test, 'test')
+            pre_test = net(x_test)
+            # pre_test = net(x_test, 'test')
             pre_test = torch.softmax(pre_test, 1)
             y_score.append(pre_test.cpu().numpy())
             pre_test_label = pre_test.argmax(1)

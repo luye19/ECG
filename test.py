@@ -131,11 +131,11 @@ auc_list = []
 
 def main():
     # load data
-    # path = '/home/ubuntu/liuyuanlin/data/ECG/500'
+    path = '/home/ubuntu/liuyuanlin/data/ECG/500'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
     path = '/home/ubuntu/liuyuanlin/data/ECG/example'
-    ECG = ECGDataset(path, frequency=250, time=30, exchange=False)
-    x_test, y_test = ECG.test_loder()
+    ECG = ECGDataset(path, frequency=500, time=60, exchange=False)
+    x_test, y_test = ECG.test_loader(seg=True)
     # x_test = x_test.unsqueeze(1)
     test_set = torch.utils.data.TensorDataset(x_test, y_test)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.bachsize, shuffle=False)
@@ -145,7 +145,7 @@ def main():
     # 10 randomized experiments
     for i in range(1, args.repeat_num + 1):
         best_acc = 0
-        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.3, seed=i + 10)
+        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.3, seed=i + 10, seg=True)
         # x_train = x_train.unsqueeze(1)
         # x_val = x_val.unsqueeze(1)
         train_set = torch.utils.data.TensorDataset(x_train, y_train)

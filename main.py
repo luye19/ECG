@@ -21,16 +21,16 @@ from Model import utils
 from GTN.transformer import Transformer
 from GTN.RE_GTN import Re_GTN, BasicBlock1d
 from GTN.DGTN_RE import DGTN_RE
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+os.environ['CUDA_LAUNCH_BLOCKING'] = '5'
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=11, help='Random seed.')
-parser.add_argument('--name', type=str, default='res1d_18_1', help='name of model.')
-parser.add_argument('--bachsize', type=int, default=24, help='Number of bachsize.')
-parser.add_argument('--epochs', type=int, default=40, help='Number of epochs to train.')
+parser.add_argument('--name', type=str, default='Res18_1d_se', help='name of model.')
+parser.add_argument('--bachsize', type=int, default=32, help='Number of bachsize.')
+parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
 parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
@@ -133,25 +133,26 @@ def main():
     path = '/home/ubuntu/liuyuanlin/data/ECG/500'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/example'
-    ECG = ECGDataset(path, frequency=250, time=30, exchange=False)
-    x_test, y_test = ECG.test_loder()
+    ECG = ECGDataset(path, frequency=500, time=60, exchange=False)
+    x_test, y_test = ECG.test_loader(seg=True)
     # x_test = x_test.unsqueeze(1)
     test_set = torch.utils.data.TensorDataset(x_test, y_test)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.bachsize, shuffle=False)
+
     log = pd.DataFrame(index=[], columns=[
         'experiment', 'epoch', 'lr', 'loss', 'acc', 'val_loss', 'val_acc'
     ])
     # 10 randomized experiments
     for i in range(1, args.repeat_num + 1):
         best_acc = 0
-        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.05, seed=i + 10)
+        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.05, seed=i + 10, seg=True)
         # x_train = x_train.unsqueeze(1)
         # x_val = x_val.unsqueeze(1)
         train_set = torch.utils.data.TensorDataset(x_train, y_train)
-        train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.bachsize, shuffle=True)
+        train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.bachsize, shuffle=True, num_workers=8)
 
         val_set = torch.utils.data.TensorDataset(x_val, y_val)
-        val_loader = torch.utils.data.DataLoader(val_set, batch_size=args.bachsize, shuffle=False)
+        val_loader = torch.utils.data.DataLoader(val_set, batch_size=args.bachsize, shuffle=False, num_workers=8)
         # model = Vgg16_net()
         # resblock = basic_block
         # model = Resnet(resblock, blockNums=[1, 1, 1, 1], nb_classes=9)

@@ -14,7 +14,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_path = '/home/ubuntu/liuyuanlin/code/ECG/best_model/GTN_RE_NOblance_3_3_1_model.pt'
 path = '/home/ubuntu/liuyuanlin/data/ECG/example'
 ECG = ECGDataset(path, frequency=250, time=30, exchange=False)
-x_test, y_test = ECG.test_loder()
+x_test, y_test = ECG.test_loader()
 # # x_test = x_test.unsqueeze(1)
 test_set = torch.utils.data.TensorDataset(x_test, y_test)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False)

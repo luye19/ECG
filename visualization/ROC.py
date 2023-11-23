@@ -16,10 +16,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 """计算每个模型的fpr、tpr、roc_auc并存储在csv文件中"""
 
 # load data
-#path = '/home/ubuntu/liuyuanlin/data/ECG/500'
-path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
+path = '/home/ubuntu/liuyuanlin/data/ECG/500'
+# path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
 # path = '/home/ubuntu/liuyuanlin/data/ECG/example'
 ECG = ECGDataset(path, frequency=250, time=30)
+
+
 # x_test, y_test = ECG.test_loder()
 # test_set = torch.utils.data.TensorDataset(x_test, y_test)
 # test_loader = torch.utils.data.DataLoader(test_set, batch_size=32, shuffle=False)
@@ -50,13 +52,14 @@ def macro_auc(model_name, test_loader, num_classes):
     test_data = tqdm(enumerate(test_loader), total=len(test_loader), disable=True)
     with torch.no_grad():
         for i, (x_test, x_label) in test_data:
+            # x_test  = x_test .unsqueeze(1)
             x_test = x_test.cuda()
             x_label = x_label.cuda()
-            # pre_test = net(x_test)
-            pre_test = net(x_test, 'test')
+            pre_test = net(x_test)
+            # pre_test = net(x_test, 'test')
             pre_test = torch.softmax(pre_test, 1)
             y_score.append(pre_test.cpu().numpy())
-            x_label = torch.nn.functional.one_hot(x_label, num_classes=9)
+            x_label = torch.nn.functional.one_hot(x_label.to(torch.int64), num_classes=9)
             y_label.append(x_label.cpu().numpy())
     test_data.close()
     y_score = np.vstack(y_score)
@@ -118,10 +121,11 @@ roc_auc = dict()
 # test_loader = torch.utils.data.DataLoader(test_set, batch_size=32, shuffle=False)
 
 
-x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.11)
-val_set = torch.utils.data.TensorDataset(x_val, y_val)
+x_test, y_test = ECG.test_loader()
+x_test = x_test.reshape(-1, 12, 96, 96)
+val_set = torch.utils.data.TensorDataset(x_test, y_test)
 val_loader = torch.utils.data.DataLoader(val_set, batch_size=32, shuffle=False)
-model_id = "GTN_RE_NOblance_3_3"
+model_id = "SwiT"
 fpr[model_id], tpr[model_id], roc_auc[model_id] = macro_auc(model_id, val_loader, num_classes=9)
 dataframe = pd.DataFrame({'fpr': fpr[model_id], 'tpr': tpr[model_id], 'roc_auc': roc_auc[model_id]})
 path = "/home/ubuntu/liuyuanlin/code/AF/ROC_AUC/%s.csv" % model_id

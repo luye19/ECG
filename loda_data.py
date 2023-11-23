@@ -119,7 +119,7 @@ class ECGDataset:
         self.HZ = 500  # 数据当前的频率
         self.exchange = exchange
 
-    def test_loader(self, seg=True):
+    def test_loader(self, seg=False):
         """load test dataset"""
         x = []
         label = []
@@ -134,23 +134,23 @@ class ECGDataset:
                 # x = sio.loadmat(record_path)['ECG'][0][0][2][:, -72000:].T
                 data = np.loadtxt(record_path)
                 if seg:
-                    #data = self._resample_(data)
+                    # data = self._resample_(data)
                     data = self.segment(data)
                     label_data = np.ones(data.shape[0]) * inform.label.loc[i]
                 else:
                     data = self._resample_(data)  # 数据重采样
                     data = self._unified_length_(data)  # 统一数据长度
-                    label_data = np.ones(data.shape[0]) * inform.label.loc[i]
+                    label_data = inform.label.loc[i]
             x.append(data)
             label.append(label_data)
-        x = np.asanyarray(x, dtype=object)
+        x = np.asanyarray(x, dtype=float)
         if self.exchange:
             x = np.swapaxes(x, 1, 2)
         if seg:
             x = torch.tensor(self._list_to_np(x))
             label = torch.tensor(self._list_to_np(label))
         else:
-            x = torch.tensor(np.asanyarray(x))
+            x = torch.tensor(x)
             label = torch.tensor(np.asanyarray(label))
         x = x.to(torch.float32)
         return x, label
@@ -177,26 +177,26 @@ class ECGDataset:
                 # a = self._test_()
                 if i in range_num:
                     if seg:
-                        #data = self._resample_(data)
+                        # data = self._resample_(data)
                         data = self.segment(data)
                         label_data = np.ones(data.shape[0]) * inform.label.loc[i]
                     else:
                         data = self._resample_(data)
                         data = self._unified_length_(data)
-                        label_data = np.ones(data.shape[0]) * inform.label.loc[i]
+                        label_data = np.ones(1) * inform.label.loc[i]
                     x_val.append(data)
                     label_val.append(label_data)
                 else:
                     if seg:
-                        #data = self._resample_(data)
-                        #data = self._transform_(data)
+                        # data = self._resample_(data)
+                        # data = self._transform_(data)
                         data = self.segment(data)
                         label_data = np.ones(data.shape[0]) * inform.label.loc[i]
                     else:
                         data = self._resample_(data)
                         data = self._transform_(data)
                         data = self._unified_length_(data)
-                        label_data = np.ones(data.shape[0]) * inform.label.loc[i]
+                        label_data = np.ones(1) * inform.label.loc[i]
                     x_train.append(data)
                     label_train.append(label_data)
             i = i + 1
@@ -207,10 +207,10 @@ class ECGDataset:
             x_train = torch.tensor(np.swapaxes(self._list_to_np(x_train), 1, 2))
             x_val = torch.tensor(np.swapaxes(self._list_to_np(x_val), 1, 2))
         else:
-            # x_train = torch.tensor(np.asanyarray(x_train))
-            # x_val = torch.tensor(np.asanyarray(x_val))
-            x_train = torch.tensor(self._list_to_np(x_train))
-            x_val = torch.tensor(self._list_to_np(x_val))
+            x_train = torch.tensor(np.asanyarray(x_train))
+            x_val = torch.tensor(np.asanyarray(x_val))
+            # x_train = torch.tensor(self._list_to_np(x_train))
+            # x_val = torch.tensor(self._list_to_np(x_val))
         x_train = x_train.to(torch.float32)
         x_val = x_val.to(torch.float32)
         label_train = torch.tensor(self._list_to_np(label_train))
@@ -258,7 +258,8 @@ class ECGDataset:
         return x, label
 
     def _unified_length_(self, data, lead_num=12):
-        N = self.frequency * self.time
+        #N = self.frequency * self.time
+        N = 9216
         if data.shape[1] <= N:
             data = np.pad(data, ((0, 0), (0, N - data.shape[1])), 'constant',
                           constant_values=(0, 0))  # 用0补齐记录时间不足30s的数据

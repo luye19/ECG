@@ -39,7 +39,7 @@ file_name = del_repeat(file_name, '_log.csv', front=False)
 file_name = del_repeat(file_name, 'metrics_', front=True)
 file_name = del_repeat(file_name, '.csv', front=False)
 file_name = set(file_name)
-#file_name = ['GTN_15']
+file_name = ['ViT', 'SwiT']
 for model_name in file_name:
     model.append(model_name)
     fname = 'metrics_' + model_name + '.csv'

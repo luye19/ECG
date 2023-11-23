@@ -2,6 +2,7 @@ import numpy as np
 import os
 import argparse
 import pandas as pd
+from Model.swin_transformer import SwinTransformer
 from tqdm import tqdm
 import torch
 import torch.nn as nn
@@ -11,10 +12,11 @@ from Model.resnet import basic_block, Resnet
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, roc_curve, roc_auc_score, auc
 from Model.VGG import MLP, Vgg16_net
+from Model.vision_transformer import ViT
 from loda_data import ECGDataset
 import random
 from Model.lstm import LSTM
-#from model.Inception import inception
+# from model.Inception import inception
 from Model.RESNET import resnet18
 from units import plot_figure, metrics_cal
 from Model import utils
@@ -22,22 +24,23 @@ from GTN.transformer import Transformer
 from GTN.RE_GTN import Re_GTN, BasicBlock1d
 from GTN.GT_RE import GT_RE
 from GTN import GT_RE
+
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=11, help='Random seed.')
-parser.add_argument('--name', type=str, default='Res18_1d_se', help='name of model.')
-parser.add_argument('--bachsize', type=int, default=64, help='Number of bachsize.')
+parser.add_argument('--name', type=str, default='SwiT', help='name of model.')
+parser.add_argument('--bachsize', type=int, default=128, help='Number of bachsize.')
 parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Initial learning rate.')
 parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')
 parser.add_argument('--dropout', type=float, default=0.5, help='Dropout rate (1 - keep probability).')
 parser.add_argument('--alpha', type=float, default=0.2, help='Alpha for the leaky_relu.')
 parser.add_argument('--repeat_num', type=int, default=3, help='number of randomized experiments')
-parser.add_argument('--interval', type=int, default=50, help='Iterates over the displayed spacing')
+parser.add_argument('--interval', type=int, default=10, help='Iterates over the displayed spacing')
 
 args = parser.parse_args()
 random.seed(args.seed)
@@ -56,8 +59,8 @@ def validate(val_loader, model, criterion):
             x_val = x_val.cuda()
             label_val = label_val.cuda()
 
-            # pre_val = model(x_val)
-            pre_val = model(x_val, 'test')
+            pre_val = model(x_val)
+            # pre_val = model(x_val, 'test')
             pre_val_label = pre_val.argmax(1)
 
             loss = criterion(pre_val, label_val.long())
@@ -86,8 +89,8 @@ def train(model, train_loader, optimizer, val_loader, epoch):
     for i, (x, label) in train_data:
         x = x.cuda()
         label = label.cuda()
-        # pre_train = model(x)
-        pre_train = model(x, 'train')
+        pre_train = model(x)
+        # pre_train = model(x, 'train')
         loss = criterion(pre_train, label.long())
         # label_hot = torch.nn.functional.one_hot(label, num_classes=9)
         # loss = criterion(pre_train, label_hot.float())
@@ -134,9 +137,10 @@ def main():
     path = '/home/ubuntu/liuyuanlin/data/ECG/500'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/example'
-    ECG = ECGDataset(path, frequency=500, time=60, exchange=False)
-    x_test, y_test = ECG.test_loader(seg=True)
+    ECG = ECGDataset(path, frequency=250, time=30, exchange=False)
+    x_test, y_test = ECG.test_loader(seg=False)
     # x_test = x_test.unsqueeze(1)
+    x_test = x_test.reshape(-1, 12, 96, 96)
     test_set = torch.utils.data.TensorDataset(x_test, y_test)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=args.bachsize, shuffle=False)
     log = pd.DataFrame(index=[], columns=[
@@ -145,9 +149,11 @@ def main():
     # 10 randomized experiments
     for i in range(1, args.repeat_num + 1):
         best_acc = 0
-        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.05, seed=i + 10, seg=True)
+        x_train, y_train, x_val, y_val = ECG.data_loader(val_size=0.05, seed=i + 10, seg=False)
         # x_train = x_train.unsqueeze(1)
         # x_val = x_val.unsqueeze(1)
+        x_train = x_train.reshape(-1, 12, 96, 96)
+        x_val = x_val.reshape(-1, 12, 96, 96)
         train_set = torch.utils.data.TensorDataset(x_train, y_train)
         train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.bachsize, shuffle=True)
 
@@ -158,11 +164,34 @@ def main():
         # model = Resnet(resblock, blockNums=[1, 1, 1, 1], nb_classes=9)
         # model = archs.__dict__[args.arch](args, 9)
         # model = LSTM(embedding_dim=7500, hidden_size=512, num_classes=9, num_layers=1, bidirectional=False)
-        model = resnet18()
+        # model = resnet18()
         # model = inception()
         # model = Transformer(d_model=256, d_input=1500, d_channel=12, d_output=9, d_hidden=512, q=2, v=2, h=2, N=2,dropout=args.dropout, pe=True, mask=True, device=DEVICE)
         # model = Re_GTN(BasicBlock1d, [2, 2, 2, 2], device=DEVICE)
         # model = GT_RE(BasicBlock1d, [2, 2, 2, 2], device=DEVICE)
+        # model = ViT(
+        #     num_leads=12,
+        #     image_size=7500,
+        #     patch_size=500,
+        #     num_classes=9,
+        #     dim=1024,
+        #     depth=6,
+        #     heads=16,
+        #     mlp_dim=2048,
+        #     dropout=0.1,
+        #     emb_dropout=0.1
+        # )
+        model = SwinTransformer(
+            img_size=96,
+            patch_size=4,
+            in_chans=12,
+            num_classes=9,
+            embed_dim=96,
+            depths=[2, 2, 6],
+            num_heads=[3, 6, 12],
+            window_size=6,
+        )
+
         model.cuda()
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -208,10 +237,10 @@ def main():
 
         print("Experiment%d The best val_acc: %.4f" % (i, best_acc))
         path = '/home/ubuntu/liuyuanlin/code/ECG/plot/' + args.name + '_ex' + str(i) + '_'
-        plot_figure(loss_tr, 'loss_train', path)
-        plot_figure(loss_v, 'loss_val', path)
-        plot_figure(acc_tr, 'acc_train', path)
-        plot_figure(acc_v, 'acc_val', path)
+        # plot_figure(loss_tr, 'loss_train', path)
+        # plot_figure(loss_v, 'loss_val', path)
+        # plot_figure(acc_tr, 'acc_train', path)
+        # plot_figure(acc_v, 'acc_val', path)
 
     # saving metrics
     res = {'num': num,

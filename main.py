@@ -17,7 +17,7 @@ from Model.lstm import LSTM
 from Model.Inception import inception
 from Model.RESNET import resnet18
 from units import plot_figure, metrics_cal
-from Model import utils
+from Model import utils, archs
 from GTN.transformer import Transformer
 from GTN.RE_GTN import Re_GTN, BasicBlock1d
 from GTN.DGTN_RE import DGTN_RE
@@ -28,7 +28,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=11, help='Random seed.')
-parser.add_argument('--name', type=str, default='Res18_1d_se', help='name of model.')
+parser.add_argument('--name', type=str, default='test', help='name of model.')
 parser.add_argument('--bachsize', type=int, default=32, help='Number of bachsize.')
 parser.add_argument('--epochs', type=int, default=100, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Initial learning rate.')
@@ -132,7 +132,7 @@ def main():
     # load data
     path = '/home/ubuntu/liuyuanlin/data/ECG/500'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
-    # path = '/home/ubuntu/liuyuanlin/data/ECG/example'
+    path = '/home/ubuntu/liuyuanlin/data/ECG/example'
     ECG = ECGDataset(path, frequency=500, time=60, exchange=False)
     x_test, y_test = ECG.test_loader(seg=True)
     # x_test = x_test.unsqueeze(1)

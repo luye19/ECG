@@ -131,7 +131,7 @@ auc_list = []
 
 def main():
     # load data
-    path = '/home/ubuntu/liuyuanlin/data/ECG/500'
+    # path = '/home/ubuntu/liuyuanlin/data/ECG/500'
     # path = '/home/ubuntu/liuyuanlin/data/ECG/500_original'
     path = '/home/ubuntu/liuyuanlin/data/ECG/example'
     ECG = ECGDataset(path, frequency=500, time=60, exchange=False)
